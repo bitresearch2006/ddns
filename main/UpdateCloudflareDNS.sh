@@ -80,6 +80,31 @@ validate_ip() {
     return 0
 }
 
+get_public_ip() {
+    # List of reliable IP echo services
+    local urls=(
+        "https://api.ipify.org"
+        "https://ifconfig.me/ip"
+        "https://icanhazip.com"
+        "https://checkip.amazonaws.com"
+    )
+
+    for url in "${urls[@]}"; do
+        # Try fetching IP with 5s timeout
+        local ip
+        ip=$(curl -4 -s --max-time 5 "$url" || true)
+        
+        # Trim whitespace
+        ip=$(echo "$ip" | xargs)
+
+        if validate_ip "$ip"; then
+            echo "$ip"
+            return 0
+        fi
+    done
+    return 1
+}
+
 ########################################
 #          INITIAL CHECKS              #
 ########################################
@@ -112,8 +137,12 @@ CF_API_BASE="https://api.cloudflare.com/client/v4"
 ########################################
 
 while true; do
-    # 1) Fetch current public IP
-    NEW_IP=$(curl -4 -s --max-time 10 "https://api.ipify.org" || true)
+# 1) Fetch current public IP using the ROBUST function
+    if ! NEW_IP=$(get_public_ip); then
+        log "ERROR: Could not determine public IP from any provider."
+        sleep 60 # Retry sooner if internet is down
+        continue
+    fi
 
     if [[ -z "${NEW_IP}" ]]; then
         log "ERROR: Could not determine current public IP (empty response)."

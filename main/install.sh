@@ -36,6 +36,14 @@ else
     exit 1
 fi
 
+# 2. Create Config Template (CRITICAL FIX)
+if [ ! -f "$CONFIG_DEST" ]; then
+    echo "⚠️  Config file not found. Creating template at $CONFIG_DEST..."
+    exit 1
+else
+    echo "ℹ️  Config file already exists. Skipping creation."
+fi
+
 # 3. Reload systemd to recognize the new service
 sudo systemctl daemon-reload
 
